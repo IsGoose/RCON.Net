@@ -11,6 +11,7 @@ namespace TestConsole
     {
         static void Main(string[] args)
         {
+            var client = new RCONClient("127.0.0.1", 2302, "ChangeMe");
         }
     }
 }
