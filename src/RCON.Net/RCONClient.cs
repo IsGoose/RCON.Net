@@ -27,7 +27,7 @@ namespace RCON.Net
             _endpoint = endpoint;
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             _socket.Connect(endpoint);
-            var loginPacket = new Packet(0, PacketType.Login, 0, BattlEyeCommand.None, "x");
+            var loginPacket = new Packet(0, PacketType.Login, 0, BattlEyeCommand.None, password);
             _socket.Send(loginPacket.Assemble());
         }
     }
