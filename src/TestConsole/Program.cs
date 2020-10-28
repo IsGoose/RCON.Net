@@ -11,7 +11,20 @@ namespace TestConsole
     {
         static void Main(string[] args)
         {
-            var client = new RCONClient("127.0.0.1", 2302, "ChangeMe");
+            Task.Run(async () => await MainAsync(args)).GetAwaiter().GetResult();
+        }
+        static async Task MainAsync(string[] args)
+        {
+            var client = new RCONClient("127.0.0.1", 2302);
+            var result = await client.AttemptLogin("x");
+
+            if (result == CommandResult.Success)
+                 client.Setup();
+
+            while (true)
+                await client.SendPacketAsync(new Packet(null, PacketType.Command, 0, BattlEyeCommand.None, Console.ReadLine()));
+
+
         }
     }
 }
