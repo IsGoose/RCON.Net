@@ -17,6 +17,8 @@ namespace RCON.Net
         public PacketType PacketType { get; set; }
         public int SequenceNumber { get; set; }
         public byte[] PayloadBytes { get; set; }
+        public byte[] RelevantPayloadBytes => PayloadBytes.Range(3, PayloadBytes.Length - 3).ToArray();
+        public string PayloadAsString => Helpers.Bytes2String(PayloadBytes).Remove(0, 3);
         public bool IsPartialPacket { get; set; }
         
 
