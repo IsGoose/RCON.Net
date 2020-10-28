@@ -56,6 +56,15 @@ namespace RCON.Net
             }
         }
 
+        public void Setup()
+        {
+            var seArgs = new SocketAsyncEventArgs();
+            seArgs.Completed += onRCONPacketReceived;
+            seArgs.SetBuffer(new byte[MaxPacketSize], 0, MaxPacketSize);
+            _socket.ReceiveAsync(seArgs);
+
+        }
+
         public async Task SendPacketAsync(Packet p)
         {
             if (p.PacketId == null)
