@@ -8,7 +8,10 @@ namespace RCON.Net
 {
     public class Packet
     {
-        public int PacketId { get; set; }
+        /// <summary>
+        /// Packet Identification Internal Reference Only - BattlEye RCon Protocol does not specifiy PacketID
+        /// </summary>
+        public int? PacketId { get; set; }
         public byte[] CalculatedChecksum { get; set; }
         public byte[] ReceivedChecksum { get; set; }
         public PacketType PacketType { get; set; }
@@ -17,7 +20,7 @@ namespace RCON.Net
         public bool IsPartialPacket { get; set; }
         
 
-        public Packet(int packetId,byte[] rawPacket)
+        public Packet(int? packetId,byte[] rawPacket)
         {
             PacketId = packetId;
 
@@ -33,7 +36,7 @@ namespace RCON.Net
             CalculatedChecksum = new CRC32().ComputeHash(PayloadBytes.Range(0,4).ToArray()).Reverse().ToArray();
         }
 
-        public Packet(int packetId,PacketType type,int sequenceNum = 0,BattlEyeCommand command = BattlEyeCommand.None,string parameter = "")
+        public Packet(int? packetId,PacketType type,int sequenceNum = 0,BattlEyeCommand command = BattlEyeCommand.None,string parameter = "")
         {
             PacketId = packetId;
             SequenceNumber = sequenceNum;
