@@ -9,7 +9,8 @@ namespace RCON.Net
     public enum CommandResult
     {
         Success,
-        Error,
-        NotConnected
+        Failed,
+        NotConnected,
+        Error
     }
 }
