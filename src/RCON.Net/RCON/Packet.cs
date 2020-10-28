@@ -35,7 +35,7 @@ namespace RCON.Net
             PayloadBytes = rawPacket.Range(6, rawPacket.Length - 6).ToArray();
 
             ReceivedChecksum = checksumBytes.ToArray();
-            CalculatedChecksum = new CRC32().ComputeHash(PayloadBytes.Range(0,4).ToArray()).Reverse().ToArray();
+            CalculatedChecksum = new CRC32().ComputeHash(PayloadBytes.Range(0,PayloadBytes.Length).ToArray()).Reverse().ToArray();
         }
 
         public Packet(int? packetId,PacketType type,int sequenceNum = 0,BattlEyeCommand command = BattlEyeCommand.None,string parameter = "")
