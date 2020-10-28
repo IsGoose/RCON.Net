@@ -30,9 +30,32 @@ namespace RCON.Net
         {
             _endpoint = endpoint;
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            _socket.Connect(endpoint);
-            var loginPacket = new Packet(0, PacketType.Login, 0, BattlEyeCommand.None, password);
-            _socket.Send(loginPacket.Assemble());
+        }
+
+        public async Task<CommandResult> AttemptLogin(string password = "")
+        {
+            try
+            {
+                await _socket.ConnectAsync(_endpoint);
+                if (!_socket.Connected)
+                    return CommandResult.NotConnected;
+
+                var loginBuffer = new byte[9];
+
+                await SendPacketAsync(new Packet(++_packetId, PacketType.Login, 0, BattlEyeCommand.None, password));
+                await _socket.ReceiveAsync(new ArraySegment<byte>(loginBuffer), SocketFlags.None);
+                var loginResponse = new Packet(++_packetId, loginBuffer);
+                if (loginResponse.PacketType == PacketType.Login && loginResponse.PayloadBytes[2] == 0x01)
+                    return CommandResult.Success;
+                else
+                    return CommandResult.Failed;
+            }
+            catch
+            {
+                return CommandResult.Error;
+            }
+        }
+
         public async Task SendPacketAsync(Packet p)
         {
             if (p.PacketId == null)
