@@ -77,6 +77,15 @@ namespace RCON.Net
             return packet.ToArray();
         }
         
+        public bool CompareChecksums()
+        {
+            if (ReceivedChecksum.Length != 4 || CalculatedChecksum.Length != 4)
+                return false;
+            for (int i = 0; i < 4; i++)
+                if (ReceivedChecksum[i] != CalculatedChecksum[i])
+                    return false;
+            return true;
+        }
 
 
     }
