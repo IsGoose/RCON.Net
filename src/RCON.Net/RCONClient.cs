@@ -16,6 +16,9 @@ namespace RCON.Net
         private List<Packet> ReceivedPackets = new List<Packet>();
         private List<Packet> SentPackets = new List<Packet>();
 
+        private MultiPacketBuffer MultiPacketBuffer = null;
+        
+
         private const int MaxPacketSize = 2048;
 
         private int _packetId = 0;
@@ -78,17 +81,30 @@ namespace RCON.Net
         {
             var bytesReceived = e.Buffer;
             Array.Resize(ref bytesReceived, e.BytesTransferred);
-            var packet = new Packet(++_packetId, bytesReceived);
+            var packet = new Packet(null, bytesReceived);
             if(packet.CompareChecksums())
             {
 
                 //Acknowledge Packet Immediately if Checksums Match so we do not receive the same packet again (See TODO Below)
                 //TODO: Handle Multi-Packet Messages
                 Task.Run(async () => await SendPacketAsync(new Packet(_packetId, PacketType.ServerMessage, packet.SequenceNumber)));
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("New Packet Received");
-                Console.ResetColor();
-                Console.WriteLine(Helpers.Bytes2String(packet.RelevantPayloadBytes));
+                if (packet.IsPartialPacket)
+                {
+                    if (MultiPacketBuffer == null)
+                        MultiPacketBuffer = new MultiPacketBuffer();
+                    MultiPacketBuffer.Add(packet);
+                    if (packet.PayloadBytes[10] == packet.PayloadBytes[11])
+                    {
+                        var combinedPacket = MultiPacketBuffer.CombinePackets();
+                        combinedPacket.PacketId = ++_packetId;
+                        Console.WriteLine(combinedPacket.PayloadAsString);
+                        MultiPacketBuffer = null;
+                    }
+
+                }
+                else
+                    packet.PacketId = ++_packetId;
+                //Console.WriteLine(Helpers.Bytes2String(packet.RelevantPayloadBytes));
 
                 //TODO: Fire EventHandlers Dependent on PacketType
                 //TODO: Allow Users to assign custom event handlers for their needs

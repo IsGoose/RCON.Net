@@ -17,8 +17,8 @@ namespace RCON.Net
         public PacketType PacketType { get; set; }
         public int SequenceNumber { get; set; }
         public byte[] PayloadBytes { get; set; }
-        public byte[] RelevantPayloadBytes => PayloadBytes.Range(3, PayloadBytes.Length - 3).ToArray();
-        public string PayloadAsString => Helpers.Bytes2String(PayloadBytes).Remove(0, 3);
+        public byte[] RelevantPayloadBytes => PayloadBytes.Range(IsPartialPacket ? 6: 3, PayloadBytes.Length - (IsPartialPacket ? 6 : 3)).ToArray();
+        public string PayloadAsString => Helpers.Bytes2String(PayloadBytes).Remove(0, IsPartialPacket ? 6 : 3);
         public bool IsPartialPacket { get; set; }
         
 
@@ -31,6 +31,8 @@ namespace RCON.Net
             PacketType = (PacketType)rawPacket[7];
 
             SequenceNumber = PacketType == PacketType.Login ? -1 : rawPacket[8];
+
+            IsPartialPacket = SequenceNumber != -1 && rawPacket[9] == 0x00;
 
             PayloadBytes = rawPacket.Range(6, rawPacket.Length - 6).ToArray();
 
