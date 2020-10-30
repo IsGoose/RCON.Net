@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace RCON.Net
@@ -30,6 +31,7 @@ namespace RCON.Net
         private int _packetId = 0;
 
         private DateTime _lastCommandSentTime = DateTime.MinValue;
+        private Timer _timer;
 
         public RCONClient(string host = "127.0.0.1",int port = 2303,int heartbeatInterval = 30000)
             : this(new IPEndPoint(IPAddress.Parse(host),port), heartbeatInterval)
@@ -78,6 +80,16 @@ namespace RCON.Net
             seArgs.SetBuffer(new byte[MaxPacketSize], 0, MaxPacketSize);
             _socket.ReceiveAsync(seArgs);
 
+            _timer = new Timer(async x =>
+            {
+                var timeDiff = DateTime.Now - _lastCommandSentTime;
+                if (timeDiff > TimeSpan.FromMilliseconds(HeartbeatInterval))
+                {
+                    Console.WriteLine("Keeping Connection Alive..");
+                    await SendPacketAsync(new Packet(null, PacketType.Command));
+                }
+            }, null, HeartbeatInterval, HeartbeatInterval);
+            
         }
 
         public async Task SendPacketAsync(Packet p)
