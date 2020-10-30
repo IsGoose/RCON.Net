@@ -8,36 +8,50 @@ namespace RCON.Net
 {
     public class Packet
     {
-        /// <summary>
-        /// Packet Identification Internal Reference Only - BattlEye RCon Protocol does not specifiy PacketID
-        /// </summary>
         public int? PacketId { get; set; }
-        public byte[] CalculatedChecksum { get; set; }
-        public byte[] ReceivedChecksum { get; set; }
         public PacketType PacketType { get; set; }
         public int SequenceNumber { get; set; }
-        public byte[] PayloadBytes { get; set; }
-        public byte[] RelevantPayloadBytes => PayloadBytes.Range(IsPartialPacket ? 6: 3, PayloadBytes.Length - (IsPartialPacket ? 6 : 3)).ToArray();
-        public string PayloadAsString => Helpers.Bytes2String(PayloadBytes).Remove(0, IsPartialPacket ? 6 : 3);
+        public string AsRelevantString => Helpers.Bytes2String(RawPayload.Range(IsPartialPacket ? 12 : 9,RawPayload.Length - (IsPartialPacket ? 12 : 9)));
+        public byte[] RawPayload { get; set; }
         public bool IsPartialPacket { get; set; }
-        
+        public bool WasPartialPacket { get; set; } = false;
+
+        private byte[] _calculatedChecksum { get; set; }
+        private byte[] _receivedChecksum { get; set; }
+
 
         public Packet(int? packetId,byte[] rawPacket)
         {
-            PacketId = packetId;
+            try
+            {
+                PacketId = packetId;
 
-            var checksumBytes = rawPacket.Range(2, 4);
+                RawPayload = rawPacket;
 
-            PacketType = (PacketType)rawPacket[7];
+                var checksumBytes = rawPacket.Range(2, 4);
 
-            SequenceNumber = PacketType == PacketType.Login ? -1 : rawPacket[8];
+                PacketType = (PacketType)rawPacket[7];
 
-            IsPartialPacket = SequenceNumber != -1 && rawPacket[9] == 0x00;
+                SequenceNumber = PacketType == PacketType.Login ? -1 : rawPacket[8];
 
-            PayloadBytes = rawPacket.Range(6, rawPacket.Length - 6).ToArray();
 
-            ReceivedChecksum = checksumBytes.ToArray();
-            CalculatedChecksum = new CRC32().ComputeHash(PayloadBytes.Range(0,PayloadBytes.Length).ToArray()).Reverse().ToArray();
+                byte[] _payloadBytes = rawPacket.Range(6, rawPacket.Length - 6).ToArray();
+
+                _receivedChecksum = checksumBytes.ToArray();
+                _calculatedChecksum = new CRC32().ComputeHash(_payloadBytes.Range(0, _payloadBytes.Length).ToArray()).Reverse().ToArray();
+
+                if(rawPacket.Length > 9)
+                    IsPartialPacket = SequenceNumber != -1 && rawPacket[9] == 0x00;
+                else
+                {
+                    IsPartialPacket = false;
+                    PacketType = PacketType == PacketType.Login ? PacketType.Login : PacketType.Acknowledgement;
+                }
+            }
+            catch
+            {
+
+            }
         }
 
         public Packet(int? packetId,PacketType type,int sequenceNum = 0,BattlEyeCommand command = BattlEyeCommand.None,string parameter = "")
@@ -56,35 +70,19 @@ namespace RCON.Net
             subsequents.AddRange(Helpers.String2Bytes(command.GetEnumDescription()));
             subsequents.AddRange(Helpers.String2Bytes(parameter));
             var checksum = new CRC32().ComputeHash(subsequents.ToArray()).Reverse().ToList();
-            CalculatedChecksum = ReceivedChecksum = checksum.ToArray();
+            _calculatedChecksum = _receivedChecksum = checksum.ToArray();
             checksum.InsertRange(0,new byte[] { 0x42, 0x45 });
             subsequents.InsertRange(0, checksum);
 
-            PayloadBytes = subsequents.Range(6,subsequents.Count - 6).ToArray();
-        }
-
-        public byte[] Assemble()
-        {
-            var packet = new List<byte>
-            {
-                0x42,
-                0x45,
-                CalculatedChecksum[0],
-                CalculatedChecksum[1],
-                CalculatedChecksum[2],
-                CalculatedChecksum[3]
-            };
-            packet.AddRange(PayloadBytes);
-
-            return packet.ToArray();
+            RawPayload = subsequents.ToArray();
         }
         
         public bool CompareChecksums()
         {
-            if (ReceivedChecksum.Length != 4 || CalculatedChecksum.Length != 4)
+            if (_receivedChecksum.Length != 4 || _calculatedChecksum.Length != 4)
                 return false;
             for (int i = 0; i < 4; i++)
-                if (ReceivedChecksum[i] != CalculatedChecksum[i])
+                if (_receivedChecksum[i] != _calculatedChecksum[i])
                     return false;
             return true;
         }

@@ -48,7 +48,7 @@ namespace RCON.Net
                 await SendPacketAsync(new Packet(++_packetId, PacketType.Login, 0, BattlEyeCommand.None, password));
                 await _socket.ReceiveAsync(new ArraySegment<byte>(loginBuffer), SocketFlags.None);
                 var loginResponse = new Packet(++_packetId, loginBuffer);
-                if (loginResponse.PacketType == PacketType.Login && loginResponse.PayloadBytes[2] == 0x01)
+                if (loginResponse.PacketType == PacketType.Login && loginResponse.RawPayload[8] == 0x01)
                     return CommandResult.Success;
                 else
                     return CommandResult.Failed;
@@ -72,7 +72,7 @@ namespace RCON.Net
         {
             if (p.PacketId == null)
                 p.PacketId = ++_packetId;
-            await _socket.SendAsync(new ArraySegment<byte>(p.Assemble()), SocketFlags.None);
+            await _socket.SendAsync(new ArraySegment<byte>(p.RawPayload), SocketFlags.None);
         }
 
 
@@ -82,29 +82,33 @@ namespace RCON.Net
             var bytesReceived = e.Buffer;
             Array.Resize(ref bytesReceived, e.BytesTransferred);
             var packet = new Packet(null, bytesReceived);
+
             if(packet.CompareChecksums())
             {
-
-                //Acknowledge Packet Immediately if Checksums Match so we do not receive the same packet again (See TODO Below)
-                //TODO: Handle Multi-Packet Messages
-                Task.Run(async () => await SendPacketAsync(new Packet(_packetId, PacketType.ServerMessage, packet.SequenceNumber)));
+                Task.Run(async () => await SendPacketAsync(new Packet(null, PacketType.ServerMessage, packet.SequenceNumber)));
                 if (packet.IsPartialPacket)
                 {
                     if (MultiPacketBuffer == null)
                         MultiPacketBuffer = new MultiPacketBuffer();
                     MultiPacketBuffer.Add(packet);
-                    if (packet.PayloadBytes[10] == packet.PayloadBytes[11])
+                    if (packet.RawPayload[10] == MultiPacketBuffer.PacketCount)
                     {
                         var combinedPacket = MultiPacketBuffer.CombinePackets();
                         combinedPacket.PacketId = ++_packetId;
                         Console.WriteLine(combinedPacket.PayloadAsString);
                         MultiPacketBuffer = null;
+                        packet = combinedPacket;
+                    } else
+                    {
+                        _socket.ReceiveAsync(e);
+                        return;
                     }
 
                 }
                 else
+                {
                     packet.PacketId = ++_packetId;
-                //Console.WriteLine(Helpers.Bytes2String(packet.RelevantPayloadBytes));
+                }
 
                 //TODO: Fire EventHandlers Dependent on PacketType
                 //TODO: Allow Users to assign custom event handlers for their needs
