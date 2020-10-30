@@ -15,11 +15,13 @@ namespace TestConsole
         }
         static async Task MainAsync(string[] args)
         {
-            var client = new RCONClient("127.0.0.1", 2302);
+            var client = new RCONClient("127.0.0.1", 2302,5000);
             var result = await client.AttemptLogin("x");
 
             if (result == CommandResult.Success)
                  client.Setup();
+            else
+                Console.WriteLine($"Connection Failure: {result}");
 
             while (true)
                 await client.SendPacketAsync(new Packet(null, PacketType.Command, 0, BattlEyeCommand.None, Console.ReadLine()));
