@@ -10,11 +10,17 @@ namespace RCON.Net
 {
     public class RCONClient
     {
+
+        public string Hostname { get; set; }
+        public int Port { get; set; }
+        public int HeartbeatInterval { get; set; }
+
+        public List<Packet> ReceivedPackets = new List<Packet>();
+        public List<Packet> SentPackets = new List<Packet>();
+
         private IPEndPoint _endpoint;
         private Socket _socket;
 
-        private List<Packet> ReceivedPackets = new List<Packet>();
-        private List<Packet> SentPackets = new List<Packet>();
 
         private MultiPacketBuffer MultiPacketBuffer = null;
         
@@ -23,14 +29,20 @@ namespace RCON.Net
 
         private int _packetId = 0;
 
-        public RCONClient(string host = "127.0.0.1",int port = 2303)
-            : this(new IPEndPoint(IPAddress.Parse(host),port))
+        private DateTime _lastCommandSentTime = DateTime.MinValue;
+
+        public RCONClient(string host = "127.0.0.1",int port = 2303,int heartbeatInterval = 30000)
+            : this(new IPEndPoint(IPAddress.Parse(host),port), heartbeatInterval)
         {
 
         }
 
-        public RCONClient(IPEndPoint endpoint) 
+        public RCONClient(IPEndPoint endpoint,int heartbeatInterval) 
         {
+            Hostname = endpoint.Address.ToString();
+            Port = endpoint.Port;
+            HeartbeatInterval = heartbeatInterval;
+
             _endpoint = endpoint;
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         }
@@ -73,6 +85,8 @@ namespace RCON.Net
             if (p.PacketId == null)
                 p.PacketId = ++_packetId;
             await _socket.SendAsync(new ArraySegment<byte>(p.RawPayload), SocketFlags.None);
+            SentPackets.Add(p);
+            _lastCommandSentTime = DateTime.Now;
         }
 
 
@@ -95,7 +109,6 @@ namespace RCON.Net
                     {
                         var combinedPacket = MultiPacketBuffer.CombinePackets();
                         combinedPacket.PacketId = ++_packetId;
-                        Console.WriteLine(combinedPacket.PayloadAsString);
                         MultiPacketBuffer = null;
                         packet = combinedPacket;
                     } else
@@ -103,7 +116,6 @@ namespace RCON.Net
                         _socket.ReceiveAsync(e);
                         return;
                     }
-
                 }
                 else
                 {
@@ -114,7 +126,7 @@ namespace RCON.Net
                 //TODO: Allow Users to assign custom event handlers for their needs
 
             } else
-                Console.WriteLine($"Checksum Missmatch - Received: {Helpers.Bytes2String(packet.ReceivedChecksum)} Calculated: {Helpers.Bytes2String(packet.ReceivedChecksum)}");
+                Console.WriteLine($"Checksum Missmatch");
             _socket.ReceiveAsync(e);
             
 
