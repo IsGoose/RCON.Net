@@ -122,14 +122,42 @@ namespace RCON.Net
                     packet.PacketId = ++_packetId;
                 }
 
-                //TODO: Fire EventHandlers Dependent on PacketType
-                //TODO: Allow Users to assign custom event handlers for their needs
+                ReceivedPackets.Add(packet);
+
+                if (packet.PacketType == PacketType.ServerMessage)
+                {
+                    
+                    ServerMessagePacketReceived(packet);
+                }
+                if (packet.PacketType == PacketType.Command)
+                {
+                    CommandPacketReceived(packet);
+                }
+                if (packet.PacketType == PacketType.Acknowledgement)
+                {
+                    AclnowledgePacketReceived(packet);
+                }
+
+                //TODO?: Allow Users to assign custom event handlers for their needs
 
             } else
                 Console.WriteLine($"Checksum Missmatch");
             _socket.ReceiveAsync(e);
             
 
+        }
+
+        private void CommandPacketReceived(Packet p)
+        {
+            Console.WriteLine($"CommandRecevied: {p.AsRelevantString}");
+        }
+        private void ServerMessagePacketReceived(Packet p)
+        {
+            Console.WriteLine($"MessageRecevied: {p.AsRelevantString}");
+        }
+        private void AclnowledgePacketReceived(Packet p)
+        {
+            Console.WriteLine($"AcknowledgeRecevied: {p.AsRelevantString}");
         }
     }
 }
