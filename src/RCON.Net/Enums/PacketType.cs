@@ -10,6 +10,7 @@ namespace RCON.Net
     {
         Login,
         Command,
-        ServerMessage
+        ServerMessage,
+        Acknowledgement
     }
 }
