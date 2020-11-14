@@ -16,6 +16,15 @@ namespace TestConsole
         static async Task MainAsync(string[] args)
         {
             var client = new RCONClient("127.0.0.1", 2302,5000);
+            client.OnServerMessageReceived += (sender, e) => {
+                Console.WriteLine("[Server Message]: " + (e as PacketEventArgs).PacketReceived.AsRelevantString);
+            };   
+            client.OnCommandReceived += (sender, e) => {
+                Console.WriteLine("[Command]: " + (e as PacketEventArgs).PacketReceived.AsRelevantString);
+            };    
+            client.OnAcknowledgeReceived += (sender, e) => {
+                Console.WriteLine("[Server Acknowledged]");
+            };
             var result = await client.AttemptLogin("x");
             Console.ForegroundColor = ConsoleColor.DarkRed;
             switch(result)

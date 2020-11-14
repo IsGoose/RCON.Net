@@ -19,6 +19,11 @@ namespace RCON.Net
         public List<Packet> ReceivedPackets = new List<Packet>();
         public List<Packet> SentPackets = new List<Packet>();
 
+        public event EventHandler OnPacketReceived;
+        public event EventHandler OnServerMessageReceived;
+        public event EventHandler OnCommandReceived;
+        public event EventHandler OnAcknowledgeReceived;
+
         private IPEndPoint _endpoint;
         private Socket _socket;
 
@@ -41,6 +46,7 @@ namespace RCON.Net
 
         public RCONClient(IPEndPoint endpoint,int heartbeatInterval) 
         {
+            
             Hostname = endpoint.Address.ToString();
             Port = endpoint.Port;
             HeartbeatInterval = heartbeatInterval;
@@ -109,6 +115,14 @@ namespace RCON.Net
             Array.Resize(ref bytesReceived, e.BytesTransferred);
             var packet = new Packet(null, bytesReceived);
 
+            if(OnPacketReceived != null)
+            {
+                onPacketReceived(packet);
+                return;
+            }
+            
+
+
             if(packet.CompareChecksums())
             {
                 Task.Run(async () => await SendPacketAsync(new Packet(null, PacketType.ServerMessage, packet.SequenceNumber)));
@@ -138,16 +152,15 @@ namespace RCON.Net
 
                 if (packet.PacketType == PacketType.ServerMessage)
                 {
-                    
-                    ServerMessagePacketReceived(packet);
+                        onServerMessageReceived(packet);
                 }
                 if (packet.PacketType == PacketType.Command)
                 {
-                    CommandPacketReceived(packet);
+                        onCommandReceived(packet);
                 }
                 if (packet.PacketType == PacketType.Acknowledgement)
                 {
-                    AclnowledgePacketReceived(packet);
+                        onAcknowledgeReceived(packet);
                 }
 
                 //TODO?: Allow Users to assign custom event handlers for their needs
@@ -159,17 +172,9 @@ namespace RCON.Net
 
         }
 
-        private void CommandPacketReceived(Packet p)
-        {
-            Console.WriteLine($"CommandRecevied: {p.AsRelevantString}");
-        }
-        private void ServerMessagePacketReceived(Packet p)
-        {
-            Console.WriteLine($"MessageRecevied: {p.AsRelevantString}");
-        }
-        private void AclnowledgePacketReceived(Packet p)
-        {
-            Console.WriteLine($"AcknowledgeRecevied: {p.AsRelevantString}");
-        }
+        protected virtual void onPacketReceived(Packet p) => OnPacketReceived?.Invoke(this,new PacketEventArgs { PacketReceived = p, TimeReceived = DateTime.UtcNow });
+        protected virtual void onServerMessageReceived(Packet p) => OnServerMessageReceived?.Invoke(this,new PacketEventArgs { PacketReceived = p, TimeReceived = DateTime.UtcNow });
+        protected virtual void onCommandReceived(Packet p) => OnCommandReceived?.Invoke(this,new PacketEventArgs { PacketReceived = p, TimeReceived = DateTime.UtcNow });
+        protected virtual void onAcknowledgeReceived(Packet p) => OnAcknowledgeReceived?.Invoke(this,new PacketEventArgs { PacketReceived = p, TimeReceived = DateTime.UtcNow });
     }
 }
