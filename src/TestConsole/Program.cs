@@ -17,11 +17,29 @@ namespace TestConsole
         {
             var client = new RCONClient("127.0.0.1", 2302,5000);
             var result = await client.AttemptLogin("x");
+            Console.ForegroundColor = ConsoleColor.DarkRed;
+            switch(result)
+            {
+                case CommandResult.NotConnected:
+                    {
+                        Console.WriteLine("[LOGIN] Socket Connection Unsucessful");
+                        return;
+                    }
+                case CommandResult.Failed :
+                    {
+                        Console.WriteLine("[LOGIN] RCON Login Attempt Failed (Incorrect Password?)");
+                        return;
+                    }
+                case CommandResult.Error:
+                    {
+                        Console.WriteLine("[LOGIN] An Unknown Error Occurred");
+                        return;
+                    }
+            }
 
-            if (result == CommandResult.Success)
-                 client.Setup();
-            else
-                Console.WriteLine($"Connection Failure: {result}");
+            Console.ResetColor();
+            Console.WriteLine($"[LOGIN] Successfully Logged in to RCON Client ({client.Hostname}:{client.Port}). Initialising Client...");
+            client.Setup();
 
             while (true)
                 await client.SendPacketAsync(new Packet(null, PacketType.Command, 0, BattlEyeCommand.None, Console.ReadLine()));
