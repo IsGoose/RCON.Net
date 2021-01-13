@@ -55,7 +55,7 @@ namespace RCON.Net
             _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         }
 
-        public async Task<CommandResult> AttemptLogin(string password = "")
+        public async Task<CommandResult> AttemptLogin(string password = "",int loginTimeout = 10000)
         {
             try
             {
@@ -64,9 +64,11 @@ namespace RCON.Net
                     return CommandResult.NotConnected;
 
                 var loginBuffer = new byte[9];
-
                 await SendPacketAsync(new Packet(++_packetId, PacketType.Login, 0, BattlEyeCommand.None, password));
+                var received = false;
+                var timer = new Timer((obj) => { if (!received) _socket.Close(); }, null, loginTimeout, Timeout.Infinite);
                 await _socket.ReceiveAsync(new ArraySegment<byte>(loginBuffer), SocketFlags.None);
+                received = true;
                 var loginResponse = new Packet(++_packetId, loginBuffer);
                 if (loginResponse.PacketType == PacketType.Login && loginResponse.RawPayload[8] == 0x01)
                     return CommandResult.Success;
@@ -75,6 +77,7 @@ namespace RCON.Net
             }
             catch
             {
+                _socket.Dispose();
                 return CommandResult.Error;
             }
         }

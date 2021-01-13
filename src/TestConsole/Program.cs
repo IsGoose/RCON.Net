@@ -25,7 +25,7 @@ namespace TestConsole
             client.OnAcknowledgeReceived += (sender, e) => {
                 Console.WriteLine("[Server Acknowledged]");
             };
-            var result = await client.AttemptLogin("x");
+            var result = await client.AttemptLogin("x",2500);
             Console.ForegroundColor = ConsoleColor.DarkRed;
             switch(result)
             {
