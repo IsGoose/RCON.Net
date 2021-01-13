@@ -93,11 +93,7 @@ namespace RCON.Net
             {
                 var timeDiff = DateTime.Now - _lastCommandSentTime;
                 if (timeDiff > TimeSpan.FromMilliseconds(HeartbeatInterval))
-                {
-                    Console.WriteLine("Keeping Connection Alive..");
                     await SendPacketAsync(new Packet(null, PacketType.Command));
-                }
-            }, null, HeartbeatInterval, HeartbeatInterval);
             
         }
 
@@ -168,8 +164,7 @@ namespace RCON.Net
 
                 //TODO?: Allow Users to assign custom event handlers for their needs
 
-            } else
-                Console.WriteLine($"Checksum Missmatch");
+            }
             _socket.ReceiveAsync(e);
             
 
