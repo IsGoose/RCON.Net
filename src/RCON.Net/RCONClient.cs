@@ -94,15 +94,17 @@ namespace RCON.Net
                 var timeDiff = DateTime.Now - _lastCommandSentTime;
                 if (timeDiff > TimeSpan.FromMilliseconds(HeartbeatInterval))
                     await SendPacketAsync(new Packet(null, PacketType.Command));
+            }, null, 0, HeartbeatInterval);
             
         }
 
-        public async Task SendPacketAsync(Packet p)
+        public async Task SendPacketAsync(Packet p,bool ignore = false)
         {
             if (p.PacketId == null)
                 p.PacketId = ++_packetId;
             await _socket.SendAsync(new ArraySegment<byte>(p.RawPayload), SocketFlags.None);
-            SentPackets.Add(p);
+            if(!ignore)
+                SentPackets.Add(p);
             _lastCommandSentTime = DateTime.Now;
         }
 
@@ -112,7 +114,7 @@ namespace RCON.Net
         {
             var bytesReceived = e.Buffer;
             Array.Resize(ref bytesReceived, e.BytesTransferred);
-            var packet = new Packet(null, bytesReceived);
+            var packet = new Packet(_packetId, bytesReceived);
 
             if(OnPacketReceived != null)
             {
